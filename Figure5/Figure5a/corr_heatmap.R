@@ -6,10 +6,7 @@ library(Seurat)
 DRG_Macrophage_aging_anno <- DRG_Macrophage_aging@meta.data
 head(DRG_Macrophage_aging_anno)
 
-DRG_Macrophage_aging.markers <- FindAllMarkers(object = DRG_Macrophage_aging, test.use = "roc",min.pct = 0.2,only.pos = T)
-#DRG_Macrophage_aging_data <- DRG_Macrophage_aging@assays$RNA@counts[unique(DRG_Macrophage_aging.markers$gene),]
 DRG_Macrophage_aging_data <- DRG_Macrophage_aging@assays$RNA@data
-
 
 ident_2 <-names(table(DRG_Macrophage_aging_anno$Celltype_3)) 
 average_2 <- as.data.frame(matrix(NA,nrow = nrow(DRG_Macrophage_aging_data),ncol = length(ident_2)))
