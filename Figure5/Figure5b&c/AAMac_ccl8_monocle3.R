@@ -1,4 +1,4 @@
-workingDir <- "E:\\DRG_aging\\paper_Wang&Chen2025\\Figure5\\Fig5ab"
+workingDir <- "F:\\paper_data_Wang&Chen_20260919\\Figure5\\Fig5b&c"
 setwd(workingDir)
 
 library(Seurat)
@@ -14,7 +14,6 @@ DRG_Macrophage_aging_ccl8 <- subset(DRG_Macrophage_aging, Celltype_3 %in% c("Mac
 
 ##创建CDS对象并预处理数据
 data <- GetAssayData(DRG_Macrophage_aging_ccl8, assay = 'RNA', slot = 'counts')
-#cell_metadata <- DRG_Macrophage_aging_2@meta.data
 cell_metadata <- DRG_Macrophage_aging_ccl8@meta.data[,c(1:5,14,19)]
 gene_annotation <- data.frame(gene_short_name = rownames(data))
 rownames(gene_annotation) <- rownames(data)
@@ -66,14 +65,9 @@ p = plot_cells(cds, color_cells_by = "age", label_cell_groups=FALSE, label_leave
 p
 ggsave("Trajectory_order.pdf", plot = p, width = 8, height = 6)
 
-##细胞按拟时排序
-# 解决order_cells(cds)报错"object 'V1' not found"
-#rownames(cds@principal_graph_aux[["UMAP"]]$dp_mst) <- NULL
-#colnames(cds@int_colData@listData$reducedDims@listData$UMAP) <- NULL
 cds_subset <- choose_cells(cds)
 cds_subset<- order_cells(cds_subset)
 
-#cds <- order_cells(cds, root_pr_nodes=get_earliest_principal_node(cds))
 
 pdf(file = "Macrophage_pseudotime.pdf",width = 4,height = 3)
 plot_cells(cds_subset, color_cells_by = "pseudotime", label_cell_groups = FALSE, 
@@ -91,82 +85,3 @@ p
 ggsave("Trajectory_Pseudotime_ccl8.pdf", plot = p, width = 4, height = 3)
 saveRDS(cds_subset, file = "cds_ccl8.rds")
 
-Track_genes <- graph_test(cds_subset, neighbor_graph="principal_graph", cores=4)
-#Track_genes <- graph_test(cds, neighbor_graph="principal_graph", cores=6)
-Track_genes <- Track_genes[,c(5,2,3,4,1,6)] %>% filter(q_value < 1e-3)
-write.csv(Track_genes, "Trajectory_genes_ccl8.csv", row.names = F)
-
-#挑选top10画图展示
-Track_genes_sig <- Track_genes %>% top_n(n=10, morans_I) %>%
-  pull(gene_short_name) %>% as.character()
-#Track_genes <- ciliated_cds_pr_test_res
-#Track_genes <- Track_genes[,c(5,2,3,4,1,6)] %>% filter(q_value < 1e-3)
-#基因表达趋势图
-monocle3::plot_genes_in_pseudotime(cds[Track_genes_sig,], color_cells_by = "age",
-                                   min_expr=0.5, ncol = 2)
-
-pseudotime <- pseudotime(cds, reduction_method = 'UMAP')
-pseudotime <- pseudotime[rownames(DRG_Macrophage_aging_ccl8@meta.data)]
-pseudotime[is.infinite(pseudotime)] <- 20
-DRG_Macrophage_aging_ccl8$pseudotime <- pseudotime
-save(DRG_Macrophage_aging_ccl8,file = "DRG_Macrophage_aging_ccl8.Rdata")
-
-#plot after Track gene filter
-##########################
-library(ComplexHeatmap)
-library(ggplot2)
-library(dplyr)
-library(RColorBrewer)
-library(circlize)
-library(monocle3)
-cds <- readRDS("E:/DRG_aging/paper_20251226/Rdata/Fig4&5/cds_ccl8.rds")
-Track_genes <- readRDS("E:/DRG_aging/paper_20251226/Rdata/Fig4&5/all_Track_genes.rds")
-load("E:/DRG_aging/paper_20251226/Rdata/Fig4&5/DRG_Macrophage_aging_ccl8.Rdata")
-Track_genes_ccl8 <- subset(Track_genes,type %in% "AAMac_Ccl8")
-top10 <- Track_genes_ccl8 %>% top_n(-100, q_value)
-genes <- unique(top10$gene_short_name)
-pt.matrix <- normalized_counts(cds)[match(genes,rownames(rowData(cds))),order(pseudotime(cds))]
-#Can also use "normalized_counts" instead of "exprs" to use various normalization methods, for example:
-#normalized_counts(cds, norm_method = "log")
-
-pt.matrix <- t(apply(pt.matrix,1,function(x){smooth.spline(x,df=3)$y}))
-pt.matrix <- t(apply(pt.matrix,1,function(x){(x-mean(x))/sd(x)}))
-rownames(pt.matrix) <- genes;
-#K means with 3 groups
-df <- DRG_Macrophage_aging_ccl8@meta.data[,c(4,19,24)]
-df <- df[colnames(cds),]
-df <- df[order(df$pseudotime),]
-col_fun = colorRamp2(c(0, 5, 10), c("blue", "white", "red"))
-
-col_pseudotime <- colorRamp2(
-  breaks = seq(from = 0, to = 18, by = 18/8), 
-  colors = brewer.pal(9,"BuPu")
-)
-col_con <- brewer.pal(3,"Dark2")[-2]
-names(col_con) <- c("3 MO","24 MO")
-
-col_clusters <- brewer.pal(3,"Set1")[-2]
-names(col_clusters) <- c("Mac_Cd163","AAM_Ccl8")
-
-ha = HeatmapAnnotation(df = df[,1:3],
-                       col = list(age = col_con,
-                                  celltype = col_clusters,
-                                  pseudotime = col_pseudotime))
-
-htkm <- Heatmap(
-  pt.matrix,
-  name                         = "z-score",
-  col                          = colorRamp2(seq(from=-2,to=2,length=11),rev(brewer.pal(11, "Spectral"))),
-  show_row_names               = TRUE,
-  show_column_names            = FALSE,
-  row_names_gp                 = gpar(fontsize = 6),
-  km = 3,
-  top_annotation = ha,
-  row_title_rot                = 0,
-  cluster_rows                 = TRUE,
-  cluster_row_slices           = FALSE,
-  cluster_columns              = FALSE)
-htkm
-pdf(file = "heatmap_pseudotime_ccl8_top100.pdf",width = 6,height = 10)
-htkm
-dev.off()
