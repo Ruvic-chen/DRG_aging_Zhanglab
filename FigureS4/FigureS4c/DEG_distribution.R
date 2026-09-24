@@ -1,16 +1,12 @@
-setwd("E:\\DRG_aging\\paper_Wang&Chen2025\\Figure3\\Fig3bc")
+setwd("/home/rstudio/DRG_aging_2025/analysis/merged/merged_2_24/merge_final/DEGs/DEG_integrated/")
 library(ggplot2)
 library(magrittr)
 library(dplyr)
 
-DEGs_filter_2_24_MAST<- readRDS("E:\\DRG_aging\\paper_Wang&Chen2025\\Rdata/Fig3/DEGs_24MO_MAST.rds")
-df_24MO <- DEGs_filter_2_24_MAST[which(abs(DEGs_filter_2_24_MAST$avg_log2FC) >= 0.7 & DEGs_filter_2_24_MAST$p_val_adj <= 0.05),] 
-gene <- unique(df_24MO$gene)
-DEGs_Neuron_filter_2_24 <- subset(df_24MO, clusters %in% c("C1-1","C1-2-1","C1-2-2","C1-2-3","C1-2-4","C2","C3","C4-1","C4-2",
+df_24MO<- readRDS("robust_ageDEGs.rds")
+
+df <- subset(df_24MO, clusters %in% c("C1-1","C1-2-1","C1-2-2","C1-2-3","C1-2-4","C2","C3","C4-1","C4-2",
                                                                              "C5-1","C5-2","C7","C8-1","C8-2","C8-3","C9"))
-gene_neuron <- unique(DEGs_Neuron_filter_2_24$gene)
-write.csv(DEGs_Neuron_filter_2_24,file = "DEGs_neuron.csv")
-df <- DEGs_Neuron_filter_2_24[which(abs(DEGs_Neuron_filter_2_24$avg_log2FC) >= 0.7),]
 #write.csv(df,file = "DEGs_Neuron_24mo_MAST_0.5.csv")
 
 df<- df[,c("clusters","gene","regulation")]
@@ -54,34 +50,8 @@ p <- ggplot(dist_counts, aes(x = n_celltypes, y = n_genes)) +
         panel.background = element_blank(), 
         axis.line = element_line(colour = "black", size = 0.6),
         axis.text.x = element_text(angle = 45, hjust = 1))+
-  scale_y_continuous(limits =c(0, 2500) ,expand = c(0,0))+
+  scale_y_continuous(limits =c(0, 2000) ,expand = c(0,0))+
   coord_flip()
 p
 ggsave(filename = "DEG_Neuron_distribution_MAST_24MO.pdf",width = 4,height = 8)
 
-
-multi_cell_genes <- df %>%
-  # 确保每个基因-细胞类群组合只计数一次
-  distinct(gene, clusters, .keep_all = TRUE) %>%
-  
-  # 计算每个基因出现的细胞类群数量
-  group_by(gene) %>%
-  mutate(n_celltypes = n_distinct(clusters)) %>%
-  ungroup() %>%
-  
-  filter(n_celltypes >= 1) %>%
-  
-  # 按基因分组，汇总细胞类群列表
-  group_by(gene, n_celltypes) %>%
-  summarise(
-    cell_types = paste(sort(unique(clusters)), collapse = ", "),
-    .groups = "drop"
-  ) %>%
-  
-  # 按细胞类群数量降序排列
-  arrange(desc(n_celltypes))
-
-
-# 3. 输出详细结果到CSV文件
-write.csv(multi_cell_genes, "multi_neuron_genes.csv", row.names = FALSE)
-cat("结果已保存到 'multi_cell_genes.csv'\n")
