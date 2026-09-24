@@ -1,22 +1,21 @@
-setwd("/home/rstudio/DRG_aging_2025/analysis/merged/merged_2_24/merge_final/DEGs/")
+setwd("/home/rstudio/DRG_aging_2025/analysis/merged/merged_2_24/merge_final/DEGs/DEG_integrated/")
 # 加载必要的包
 library(tidyverse)
 library(ggplot2)
 library(dplyr)
 library(tidyr)
-df_24MO <- readRDS(file = "DEGs_24MO_filter_2_24_MAST.rds")
-df_24MO_filter <- df_24MO[which(abs(df_24MO$avg_log2FC) >= 0.7 & df_24MO$p_val_adj <= 0.05),]
+df_24MO <- readRDS(file = "robust_ageDEGs.rds")
+#df_24MO_filter <- df_24MO[which(abs(df_24MO$avg_log2FC) >= 0.7 & df_24MO$p_val_adj <= 0.05),]
 
 #df_24MO <- memento_all_celltypes_24MO_results[which(abs(memento_all_celltypes_24MO_results$de_coef) >= 0.5 & memento_all_celltypes_24MO_results$de_pval_adj <= 0.01),] 
 #df_32MO <- memento_all_celltypes_32MO_results[which(abs(memento_all_celltypes_32MO_results$de_coef) >= 0.5 & memento_all_celltypes_32MO_results$de_pval_adj <= 0.01),]
 
-df_24MO_filter$regulation <- factor(df_24MO_filter$regulation, levels = c("up","down"))
-df_24MO_filter$clusters <- factor(df_24MO_filter$clusters, levels = c("C1-1","C1-2-1","C1-2-2","C1-2-3","C1-2-4","C2","C3","C4-1","C4-2",
+df_24MO$clusters <- factor(df_24MO$clusters, levels = c("C1-1","C1-2-1","C1-2-2","C1-2-3","C1-2-4","C2","C3","C4-1","C4-2",
                                                                       "C5-1","C5-2","C7","C8-1","C8-2","C8-3","C9",
                                                                       "Satellite","Schwann_N","Schwann_M","Fibroblast","VEC","VSMC",
                                                                       "Macrophage", "Monocyte", "Neutrophil","B Cell",  "T Cell"))
 
-ggplot(df_24MO_filter, aes(x = clusters, fill = regulation)) +
+ggplot(df_24MO, aes(x = clusters, fill = regulation)) +
   geom_bar(position = "dodge") +
   scale_fill_manual(values = c("up" = "#E41A1C", "down" = "#377EB8"))+
   labs(
